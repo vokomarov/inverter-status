@@ -1,0 +1,3 @@
+
+void initWiFi();
+void checkWiFi();
