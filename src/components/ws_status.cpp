@@ -3,11 +3,20 @@
 WSStatus::WSStatus()
 {
     ScreenComponent();
+
+    this->setFrameRate(4, 2);
+}
+
+void WSStatus::setStatus(bool connected, bool authenticated)
+{
+    this->connected = connected;
+    this->authenticated = authenticated;
 }
 
 void WSStatus::setStatus(bool connected)
 {
     this->connected = connected;
+    this->authenticated = false;
 }
 
 void WSStatus::initialDraw()
@@ -31,6 +40,17 @@ void WSStatus::drawIcon()
     uint32_t color = this->iconColorDisconnected;
     if (this->connected) {
         color = this->iconColor;
+    }
+
+    if (!this->authenticated) {
+        switch(this->getFrameNumber()) {
+            case 0:
+                color = TFT_BLACK;
+                break;
+            case 1:
+                //
+                break;
+        }
     }
 
     display.fillCircle(iconX, iconY, 2, color);

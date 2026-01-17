@@ -13,12 +13,12 @@ public:
         {
             // Bus Settings (Mandatory SPI Pins AND the DC Pin) ---
             auto cfg = _bus_instance.config();
-            cfg.spi_host = HSPI_HOST;      
+            cfg.spi_host = SPI2_HOST;      
             cfg.freq_write = 40000000;     
-            cfg.pin_sclk = 14; // SCL
-            cfg.pin_mosi = 13; // SDA
+            cfg.pin_sclk = 2; // SCL
+            cfg.pin_mosi = 1; // SDA
             cfg.pin_miso = -1;             
-            cfg.pin_dc = 15;
+            cfg.pin_dc = 4;
             _bus_instance.config(cfg);
             _panel_instance.setBus(&_bus_instance);
         }
@@ -26,7 +26,7 @@ public:
         {
             auto cfg = _panel_instance.config();
             
-            cfg.pin_cs = 5;   // CS (GPIO 5)
+            cfg.pin_cs = 3;   // CS (GPIO 5)
             cfg.pin_rst = 16; // RST (GPIO 16)
 
             cfg.panel_width = 128;

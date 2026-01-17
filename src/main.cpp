@@ -53,6 +53,7 @@ void setup() {
 }
 
 void loop() {
+  drawLines();
   checkWiFi();
   controller.draw();
 

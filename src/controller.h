@@ -30,6 +30,7 @@ class Controller {
         
         void setWifiSignal(int strength);
         void setWebsocketStatus(bool connected);
+        void setWebsocketStatus(bool connected, bool authenticated);
         State getState();
         void onStateUpdate(State newState);
         void initialDraw();

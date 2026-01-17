@@ -174,9 +174,11 @@ void WebSocketClient::messageHandler(String payload) {
         Serial.println("HomeAssistant authentication required, sending auth...");
         this->sendAuth();
     } else if (strcmp(type, "auth_ok") == 0) {
+        (*this->controller).setWebsocketStatus(true, true);
         Serial.println("HomeAssistant authentication successful");
         this->sendRenderInitialData();
     } else if (strcmp(type, "auth_invalid") == 0) {
+        (*this->controller).setWebsocketStatus(true, false);
         Serial.println("HomeAssistant authentication failed");
     } else if (strcmp(type, "event") == 0) {
         if (doc["event"] && doc["event"]["result"]) {

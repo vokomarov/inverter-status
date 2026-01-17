@@ -15,6 +15,7 @@ class State {
         bool powerAvailable;
         bool powerKnown;
         bool websocketConnected;
+        bool websocketAuthenticated;
 
         float powerConsumption; // in kW (smart meter active power)
         float powerConsumptionFromBattery; // in kW (current load consumption)

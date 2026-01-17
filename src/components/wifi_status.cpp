@@ -9,6 +9,14 @@ WiFiStatus::WiFiStatus()
 void WiFiStatus::setSignal(int strength)
 {
     this->signalStrength = strength;
+
+    if (strength >= -67) {
+        this->state = SIGNAL_GOOD;
+    } else if (strength >= -80) {
+        this->state = SIGNAL_FAIR;
+    } else {
+        this->state = SIGNAL_BAD;
+    }
 }
 
 void WiFiStatus::initialDraw()
@@ -33,8 +41,19 @@ void WiFiStatus::drawIcon()
     int iconY = y + 0;
 
     uint32_t color = this->iconColor;
+    uint32_t color1 = this->iconColor;
+    uint32_t color2 = this->iconColor;
+    uint32_t color3 = this->iconColor;
     if (this->signalStrength >= 0) {
         color = this->iconColorDisconnected;
+        color1 = this->iconColorDisconnected;
+        color2 = this->iconColorDisconnected;
+        color3 = this->iconColorDisconnected;
+    } else if (this->state == SIGNAL_BAD) {
+        color2 = TFT_BLACK;
+        color3 = TFT_BLACK;
+    } else if (this->state == SIGNAL_FAIR) {
+        color3 = TFT_BLACK;
     }
 
     // center point (bottom-centered in the 20x20 box)
@@ -58,19 +77,19 @@ void WiFiStatus::drawIcon()
     display.drawArc(cx, cy,
                     r_outer - (thickness - 1), r_outer,
                     startDeg, endDeg,
-                    color);
+                    color3);
 
     // Middle arc
     display.drawArc(cx, cy,
                     r_mid - (thickness - 1), r_mid,
                     startDeg, endDeg,
-                    color);
+                    color2);
 
     // Inner arc
     display.drawArc(cx, cy,
                     r_inner - (thickness - 1), r_inner,
                     startDeg, endDeg,
-                    color);
+                    color1);
 
     // Draw the bottom dot to indicate the source of the signal
     display.fillCircle(cx, cy + 1, 1, color);

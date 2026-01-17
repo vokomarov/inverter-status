@@ -48,7 +48,6 @@ void checkWiFi() {
         if (WiFi.status() == WL_CONNECTED) {
             // WiFi is connected
             controller.setWifiSignal(WiFi.RSSI());
-            Serial.printf("RSSI: %d\n\r", WiFi.RSSI());
 
             webSocketClient.check();
         } else {

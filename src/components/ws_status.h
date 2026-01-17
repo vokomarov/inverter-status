@@ -4,6 +4,7 @@
 class WSStatus: public ScreenComponent {
 private:
     bool connected;
+    bool authenticated;
 
     int iconColor;
     int iconColorDisconnected;
@@ -12,6 +13,7 @@ private:
 public: 
     WSStatus();
     void setStatus(bool connected);
+    void setStatus(bool connected, bool authenticated);
     void initialDraw();
     void draw();
 };
