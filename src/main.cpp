@@ -29,6 +29,11 @@ void setup() {
   Serial.printf("Booting (build %s, %s)\n\r", __DATE__, __TIME__);
   Serial.println("Initialising display...");
 
+  pinMode(GPIO_NUM_5, OUTPUT);
+  pinMode(GPIO_NUM_6, OUTPUT);
+  digitalWrite(GPIO_NUM_5, HIGH);
+  digitalWrite(GPIO_NUM_6, HIGH);
+
   tft.init(); 
   tft.setRotation(0); 
   tft.setColorDepth(24);
