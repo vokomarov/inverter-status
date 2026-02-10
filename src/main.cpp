@@ -1,17 +1,18 @@
-#include <Arduino.h>
 #include "LGFX_User_Setup.hpp"
-#include "config.h"
-#include "secrets.h"
-#include "network.h"
 #include "components/battery.h"
 #include "components/power_metric.h"
-#include "components/time_metric.h"
 #include "components/power_status.h"
+#include "components/time_metric.h"
 #include "components/wifi_status.h"
 #include "components/ws_status.h"
+#include "config.h"
 #include "controller.h"
+#include "network.h"
+#include "secrets.h"
+#include <Arduino.h>
 
 const bool debug = false;
+constexpr int SENSOR_PIN = GPIO_NUM_13;
 
 LGFX tft;
 Battery battery;
@@ -23,19 +24,21 @@ TimeMetric timeMetric;
 Controller controller;
 
 void drawLines();
+void checkPower();
 
 void setup() {
   Serial.begin(115200);
   Serial.printf("Booting (build %s, %s)\n\r", __DATE__, __TIME__);
   Serial.println("Initialising display...");
 
+  pinMode(SENSOR_PIN, INPUT_PULLUP);
   pinMode(GPIO_NUM_5, OUTPUT);
   pinMode(GPIO_NUM_6, OUTPUT);
   digitalWrite(GPIO_NUM_5, HIGH);
   digitalWrite(GPIO_NUM_6, HIGH);
 
-  tft.init(); 
-  tft.setRotation(0); 
+  tft.init();
+  tft.setRotation(0);
   tft.setColorDepth(24);
 
   drawLines();
@@ -47,10 +50,13 @@ void setup() {
   wifiStatus.setDisplay(&tft);
   wsStatus.setDisplay(&tft);
 
-  controller.setScreenComponents(&battery, &wifiStatus, &wsStatus, &powerStatus, &powerMetric, &timeMetric);
+  controller.setScreenComponents(&battery, &wifiStatus, &wsStatus, &powerStatus,
+                                 &powerMetric, &timeMetric);
   controller.initialDraw();
 
   Serial.println("Display setup completed.");
+
+  checkPower();
 
   initWiFi();
 
@@ -58,6 +64,7 @@ void setup() {
 }
 
 void loop() {
+  checkPower();
   drawLines();
   checkWiFi();
   controller.draw();
@@ -78,9 +85,6 @@ void drawLines() {
   tft.drawLine(0, 107, 127, 107, tft.color888(32, 32, 32));
 }
 
-
-
-
-
-
-
+void checkPower() {
+  controller.setPowerSensorAvailable(digitalRead(SENSOR_PIN) == LOW ? 1 : 0);
+}

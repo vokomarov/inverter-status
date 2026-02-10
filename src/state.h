@@ -31,7 +31,9 @@ class State {
             this->powerAvailable = false;
             this->powerKnown = false;
             this->websocketConnected = false;
+            this->websocketAuthenticated = false;
             this->powerConsumption = -1.0;
+            this->powerConsumptionFromBattery = -1.0;
             this->batteryPercentage = 0.0;
             this->batteryChargingPower = 0.0;
             this->batteryChargingDuration = "";

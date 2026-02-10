@@ -3,6 +3,7 @@
 
 const char* SENSOR_BATTERY_SOC = "sensor.battery_soc";
 const char* SENSOR_GRID_POWER_AVAILABLE = "binary_sensor.grid_power_available";
+const char* SENSOR_GRID_POWER_MONITOR = "binary_sensor.grid_power_monitor";
 const char* SENSOR_SMART_METER_ACTIVE_POWER = "sensor.smart_meter_active_power";
 const char* SENSOR_CURRENT_LOAD_CONSUMPTION = "sensor.current_load_consumption";
 const char* SENSOR_RESERVE_POWER_BATTERY_CHARGE_POWER = "sensor.reserve_power_battery_charge_power";
@@ -50,7 +51,9 @@ void WebSocketClient::check() {
 
         if (this->isNetworkAvailable) {
             this->init();
-        }        
+        }
+    } else {
+        this->checkPowerSensor();
     }
 }
 
@@ -129,6 +132,7 @@ void WebSocketClient::sendRenderInitialData() {
 
     tpl[SENSOR_BATTERY_SOC] = "{{ states('sensor.battery_soc') }}";
     tpl[SENSOR_GRID_POWER_AVAILABLE] = "{{ states('binary_sensor.grid_power_available') }}";
+    tpl[SENSOR_GRID_POWER_MONITOR] = "{{ states('binary_sensor.grid_power_monitor') }}";
     tpl[SENSOR_SMART_METER_ACTIVE_POWER] = "{{ states('sensor.smart_meter_active_power') }}";
     tpl[SENSOR_CURRENT_LOAD_CONSUMPTION] = "{{ states('sensor.current_load_consumption') }}";
     tpl[SENSOR_RESERVE_POWER_BATTERY_CHARGE_POWER] = "{{ states('sensor.reserve_power_battery_charge_power') }}";
@@ -143,6 +147,17 @@ void WebSocketClient::sendRenderInitialData() {
     doc["id"] = 1;
     doc["type"] = "render_template";
     doc["template"] = buff.c_str();
+
+    this->send(doc);
+}
+
+void WebSocketClient::sendPowerSensor(const bool state) {
+    JsonDocument doc;
+
+    doc["id"] = this->messageId++;
+    doc["type"] = "fire_event";
+    doc["event_type"] = "grid_power_monitor_update";
+    doc["event_data"]["available"] = state ? "on" : "off";
 
     this->send(doc);
 }
@@ -187,6 +202,8 @@ void WebSocketClient::messageHandler(String payload) {
         } else {
             Serial.printf("HomeAssistant event received: %s\n\r", payload.c_str());
         }
+    } else if (strcmp(type, "result") == 0) {
+        Serial.printf("HomeAssistant result received: %s\n\r", payload.c_str());
     } else {
         Serial.printf("HomeAssistant message received: %s\n\r", payload.c_str());
     }
@@ -216,5 +233,28 @@ void WebSocketClient::handleState(JsonObject result) {
     String reservePowerBatteryDischargeLeftDuration = result[SENSOR_RESERVE_POWER_BATTERY_DISCHARGE_LEFT_DURATION];;
     newState.batteryDischargingDuration = reservePowerBatteryDischargeLeftDuration;
 
+    bool lastReportedPowerAvailable = strcmp(result[SENSOR_GRID_POWER_MONITOR], "on") == 0;
+    this->checkPowerSensor(lastReportedPowerAvailable);
+
     this->controller->onStateUpdate(newState);
+}
+
+void WebSocketClient::checkPowerSensor() {
+    const int powerSensorAvailable = this->controller->getPowerSensorAvailable();
+    if (powerSensorAvailable != -1 && powerSensorAvailable != this->lastReportedPowerSensorAvailable) {
+        Serial.printf("Last reported power sensor available: %d\n\r", this->lastReportedPowerSensorAvailable);
+        Serial.printf("Power sensor available: %d\n\r", powerSensorAvailable);
+        this->sendPowerSensor(powerSensorAvailable);
+        this->lastReportedPowerSensorAvailable = powerSensorAvailable;
+    }
+}
+
+void WebSocketClient::checkPowerSensor(bool lastPowerSensor) {
+    const int powerSensorAvailable = this->controller->getPowerSensorAvailable();
+    if (powerSensorAvailable != -1 && (powerSensorAvailable == 1) != lastPowerSensor) {
+        Serial.printf("Last stored power sensor available: %d\n\r", lastPowerSensor);
+        Serial.printf("Power sensor available: %d\n\r", powerSensorAvailable);
+        this->sendPowerSensor(powerSensorAvailable);
+        this->lastReportedPowerSensorAvailable = powerSensorAvailable;
+    }
 }

@@ -85,6 +85,15 @@ void Controller::onStateUpdate(State newState) {
     this->lastKnownState = newState;
 }
 
+void Controller::setPowerSensorAvailable(int available) {
+    this->powerSensorAvailable = available;
+}
+
+int Controller::getPowerSensorAvailable() {
+    return this->powerSensorAvailable;
+}
+
+
 void Controller::initialDraw() {
     this->wifiStatus->setLocation(60, 0);
     this->wifiStatus->setSignal(0);

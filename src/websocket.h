@@ -1,7 +1,9 @@
+#pragma once
+
+#include "controller.h"
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <esp_websocket_client.h>
-#include "controller.h"
 
 #define NO_DATA_TIMEOUT_SEC 10
 
@@ -15,13 +17,19 @@ class WebSocketClient {
         bool isNetworkAvailable = false;
 
         Controller *controller;
-        
+
+        unsigned long messageId = 2;
         String messageBuffer;
         uint32_t expectedMessageLength = 0;
+
+        int lastReportedPowerSensorAvailable = -1;
 
         void send(JsonDocument message);
         void sendAuth();
         void sendRenderInitialData();
+        void checkPowerSensor();
+        void checkPowerSensor(bool lastPowerSensor);
+        void sendPowerSensor(bool state);
         void handleState(JsonObject result);
 
     protected:
