@@ -202,9 +202,13 @@ void WebSocketClient::send(JsonDocument message) {
 
 void WebSocketClient::messageHandler(String payload) {
     JsonDocument doc;
-    deserializeJson(doc, payload.c_str());
+    DeserializationError err = deserializeJson(doc, payload.c_str());
+    if (err) {
+        Serial.printf("JSON parse failed: %s\n\r", err.c_str());
+        return;
+    }
 
-    const char* type = doc["type"];
+    const char* type = doc["type"] | "";
     if (strcmp(type, "auth_required") == 0) {
         Serial.println("HomeAssistant authentication required, sending auth...");
         this->sendAuth();
