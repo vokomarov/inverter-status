@@ -33,9 +33,7 @@ void setup() {
 
   pinMode(SENSOR_PIN, INPUT_PULLUP);
   pinMode(GPIO_NUM_5, OUTPUT);
-  pinMode(GPIO_NUM_6, OUTPUT);
   digitalWrite(GPIO_NUM_5, HIGH);
-  digitalWrite(GPIO_NUM_6, HIGH);
 
   tft.init();
   tft.setRotation(0);
@@ -65,8 +63,8 @@ void setup() {
 
 void loop() {
   checkPower();
-  drawLines();
   checkWiFi();
+  pumpWebSocket();
   controller.draw();
 
   delay(100);

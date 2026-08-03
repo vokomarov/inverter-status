@@ -2,7 +2,6 @@
 
 PowerStatus::PowerStatus()
 {
-    ScreenComponent();
     this->enableText = false;
 }
 
@@ -20,11 +19,11 @@ void PowerStatus::setStatus(bool available, bool known)
 
 void PowerStatus::initialDraw()
 {
-    this->iconColorOn = this->display.color888(102, 255, 102);
-    this->iconColorOff = this->display.color888(255, 69, 0);
-    this->iconColorUnknown = this->display.color888(64, 64, 64);
-    this->textColorOn = this->display.color888(0, 255, 0);
-    this->textColorOff = this->display.color888(255, 0, 0);
+    this->iconColorOn = this->display->color888(102, 255, 102);
+    this->iconColorOff = this->display->color888(255, 69, 0);
+    this->iconColorUnknown = this->display->color888(64, 64, 64);
+    this->textColorOn = this->display->color888(0, 255, 0);
+    this->textColorOff = this->display->color888(255, 0, 0);
 
     this->drawIcon();
     this->drawText();
@@ -47,10 +46,10 @@ void PowerStatus::drawIcon()
     }
 
     // Draw a 20x20 power plug icon at (x,y) using light gray color.
-    display.fillRect(iconX + 2, iconY + 2, 2, 6, color);
-    display.fillRect(iconX + 7, iconY + 2, 2, 6, color);
-    display.fillArc(iconX + 5, iconY + 7, 5, 0, 0, 180, color);
-    display.fillRect(iconX + 5, iconY + 12, 1, 4, color);
+    display->fillRect(iconX + 2, iconY + 2, 2, 6, color);
+    display->fillRect(iconX + 7, iconY + 2, 2, 6, color);
+    display->fillArc(iconX + 5, iconY + 7, 5, 0, 0, 180, color);
+    display->fillRect(iconX + 5, iconY + 12, 1, 4, color);
 }
 
 void PowerStatus::drawText()
@@ -66,14 +65,14 @@ void PowerStatus::drawText()
         return;
     }
 
-    display.setFont(&fonts::FreeSansBold9pt7b); 
-    display.setCursor(textX, textY);
+    display->setFont(&fonts::FreeSansBold9pt7b); 
+    display->setCursor(textX, textY);
 
     if (this->available) {
-        display.setTextColor(this->textColorOn);
-        display.print("ON");
+        display->setTextColor(this->textColorOn);
+        display->print("ON");
     } else {
-        display.setTextColor(this->textColorOff);
-        display.print("OFF");
+        display->setTextColor(this->textColorOff);
+        display->print("OFF");
     }
 }

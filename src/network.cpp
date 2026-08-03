@@ -18,11 +18,11 @@ void initWiFi() {
     WiFi.mode(WIFI_STA);
     esp_wifi_set_ps(WIFI_PS_NONE);
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-   
-    static unsigned long WiFiConnectionTimeStarted = millis();
-  
+
+    unsigned long WiFiConnectionTimeStarted = millis();
+
     while (!WiFi.isConnected()) {
-        // connecting.. 
+        delay(50);
 
         if (millis() - WiFiConnectionTimeStarted > WIFI_CONN_TIMEOUT) {
             Serial.printf("WiFI connection failed (code %d)! Rebooting in 5 seconds..", WiFi.waitForConnectResult());
@@ -63,4 +63,11 @@ void checkWiFi() {
             initWiFi();
         }
     }
+}
+
+// Called from loop() before controller.draw(); the only place websocket-task
+// data (state updates, connection status) gets applied to Controller/display.
+void pumpWebSocket() {
+    webSocketClient.setPowerSensorAvailable(controller.getPowerSensorAvailable());
+    webSocketClient.pump();
 }

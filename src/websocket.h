@@ -4,8 +4,8 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <esp_websocket_client.h>
-
-#define NO_DATA_TIMEOUT_SEC 10
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 
 class WebSocketClient {
     private:
@@ -24,23 +24,42 @@ class WebSocketClient {
 
         int lastReportedPowerSensorAvailable = -1;
 
-        void send(JsonDocument message);
+        // Data handed from the websocket task to the loop task; every read/write
+        // outside of pump() must go through stateMutex. No display or Controller
+        // access is allowed from the websocket task itself.
+        SemaphoreHandle_t stateMutex;
+
+        State lastSensorState;
+        State pendingState;
+        bool hasPendingState = false;
+
+        bool pendingWsConnected = false;
+        bool pendingWsAuthenticated = false;
+        bool pendingWsHasAuthenticated = false;
+        bool hasPendingWsStatus = false;
+
+        int localPowerSensorAvailable = -1;
+
+        void send(const JsonDocument &message);
         void sendAuth();
         void sendRenderInitialData();
         void checkPowerSensor();
         void checkPowerSensor(bool lastPowerSensor);
         void sendPowerSensor(bool state);
         void handleState(JsonObject result);
+        void queueWsStatus(bool connected, bool authenticated, bool hasAuthenticated);
 
     protected:
-       
+
     public:
         WebSocketClient();
         void configure(String host, int port, String token, Controller *controller);
         void setNetworkAvailable(bool status);
+        void setPowerSensorAvailable(int available);
         void init();
         void check();
         void destroy();
+        void pump();
         void eventHandler(void *args, esp_event_base_t base, int32_t id, void *data);
         void messageHandler(String payload);
 

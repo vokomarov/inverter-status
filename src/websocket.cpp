@@ -10,18 +10,42 @@ const char* SENSOR_RESERVE_POWER_BATTERY_CHARGE_POWER = "sensor.reserve_power_ba
 const char* SENSOR_RESERVE_POWER_BATTERY_CHARGE_LEFT_DURATION = "sensor.reserve_power_battery_charge_left_duration";
 const char* SENSOR_RESERVE_POWER_BATTERY_DISCHARGE_LEFT_DURATION = "sensor.reserve_power_battery_discharge_left_duration";
 
-WebSocketClient::WebSocketClient() {}
+// HA's render_template result delivers every value as a JSON string, even
+// numeric sensors - is<float>() alone would reject them all. Accept a real
+// number too (belt and suspenders), otherwise parse the string; "unavailable"/
+// "unknown"/"" fail to parse and the caller keeps the previous value.
+static bool parseFloatState(JsonVariantConst value, float &out) {
+    if (value.is<float>()) { out = value.as<float>(); return true; }
+    const char* s = value.as<const char*>();
+    if (s == nullptr || *s == '\0') return false;
+    char* end = nullptr;
+    float parsed = strtof(s, &end);
+    if (end == s || *end != '\0') return false;
+    out = parsed;
+    return true;
+}
+
+WebSocketClient::WebSocketClient() {
+    this->stateMutex = xSemaphoreCreateMutex();
+}
 
 void WebSocketClient::configure(String host, int port, String token, Controller *controller) {
     static char ws_uri[256];
     snprintf(ws_uri, sizeof(ws_uri), "ws://%s:%d/api/websocket", host.c_str(), port);
     this->token = token;
     this->config.uri = ws_uri;
+    this->config.disable_auto_reconnect = true;
     this->controller = controller;
 }
 
 void WebSocketClient::setNetworkAvailable(bool status) {
     this->isNetworkAvailable = status;
+}
+
+void WebSocketClient::setPowerSensorAvailable(int available) {
+    xSemaphoreTake(this->stateMutex, portMAX_DELAY);
+    this->localPowerSensorAvailable = available;
+    xSemaphoreGive(this->stateMutex);
 }
 
 static void staticEventHandler(void *args, esp_event_base_t base, int32_t id, void *data) {
@@ -67,16 +91,28 @@ void WebSocketClient::destroy() {
     this->client = nullptr;
 }
 
+// Stores a websocket status update for pump() to apply on the loop task.
+// hasAuthenticated selects which Controller::setWebsocketStatus overload pump() calls.
+void WebSocketClient::queueWsStatus(bool connected, bool authenticated, bool hasAuthenticated) {
+    xSemaphoreTake(this->stateMutex, portMAX_DELAY);
+    this->pendingWsConnected = connected;
+    this->pendingWsAuthenticated = authenticated;
+    this->pendingWsHasAuthenticated = hasAuthenticated;
+    this->hasPendingWsStatus = true;
+    xSemaphoreGive(this->stateMutex);
+}
+
+// Runs on the websocket task. Must never call into Controller, components, or the display.
 void WebSocketClient::eventHandler(void *args, esp_event_base_t base, int32_t eventId, void *eventData) {
     esp_websocket_event_data_t *data = (esp_websocket_event_data_t *) eventData;
     switch (eventId) {
     case WEBSOCKET_EVENT_CONNECTED:
         Serial.println("WEBSOCKET_EVENT_CONNECTED");
-        (*this->controller).setWebsocketStatus(true);
+        this->queueWsStatus(true, false, false);
         break;
     case WEBSOCKET_EVENT_DISCONNECTED:
         Serial.println("WEBSOCKET_EVENT_DISCONNECTED");
-        (*this->controller).setWebsocketStatus(false);
+        this->queueWsStatus(false, false, false);
 
         // Clear message buffer on disconnect
         this->messageBuffer.clear();
@@ -84,19 +120,19 @@ void WebSocketClient::eventHandler(void *args, esp_event_base_t base, int32_t ev
         break;
     case WEBSOCKET_EVENT_DATA:
         Serial.println("WEBSOCKET_EVENT_DATA");
-        
-        if (data->op_code == 0x1) { // text frame
-            // Initialize buffer for new message
-            if (data->payload_offset == 0) {
+
+        if (data->op_code == 0x1 || (data->op_code == 0x0 && this->expectedMessageLength > 0)) {
+            // Initialize buffer for a new message
+            if (data->op_code == 0x1 && data->payload_offset == 0) {
                 this->messageBuffer.clear();
                 this->expectedMessageLength = data->payload_len;
             }
-            
-            // Append current chunk to buffer
-            this->messageBuffer += String((char *)data->data_ptr).substring(0, data->data_len);
-            
+
+            // Append current chunk to buffer (data_ptr is not NUL-terminated)
+            this->messageBuffer.concat((const char *)data->data_ptr, data->data_len);
+
             // Check if we've received the complete message
-            if (this->messageBuffer.length() == this->expectedMessageLength) {
+            if (this->messageBuffer.length() >= this->expectedMessageLength) {
                 this->messageHandler(this->messageBuffer);
                 this->messageBuffer.clear();
                 this->expectedMessageLength = 0;
@@ -120,7 +156,7 @@ void WebSocketClient::eventHandler(void *args, esp_event_base_t base, int32_t ev
 
 void WebSocketClient::sendAuth() {
     JsonDocument doc;
-    
+
     doc["type"] = "auth";
     doc["access_token"] = this->token;
 
@@ -143,7 +179,7 @@ void WebSocketClient::sendRenderInitialData() {
     serializeJson(tpl, buff);
 
     JsonDocument doc;
-    
+
     doc["id"] = 1;
     doc["type"] = "render_template";
     doc["template"] = buff.c_str();
@@ -162,7 +198,7 @@ void WebSocketClient::sendPowerSensor(const bool state) {
     this->send(doc);
 }
 
-void WebSocketClient::send(JsonDocument message) {
+void WebSocketClient::send(const JsonDocument &message) {
     size_t n = measureJson(message);
     char* payload = (char*)malloc(n + 1);
     if (payload == nullptr) {
@@ -182,18 +218,22 @@ void WebSocketClient::send(JsonDocument message) {
 
 void WebSocketClient::messageHandler(String payload) {
     JsonDocument doc;
-    deserializeJson(doc, payload.c_str());
+    DeserializationError err = deserializeJson(doc, payload.c_str());
+    if (err) {
+        Serial.printf("JSON parse failed: %s\n\r", err.c_str());
+        return;
+    }
 
-    const char* type = doc["type"];
+    const char* type = doc["type"] | "";
     if (strcmp(type, "auth_required") == 0) {
         Serial.println("HomeAssistant authentication required, sending auth...");
         this->sendAuth();
     } else if (strcmp(type, "auth_ok") == 0) {
-        (*this->controller).setWebsocketStatus(true, true);
+        this->queueWsStatus(true, true, true);
         Serial.println("HomeAssistant authentication successful");
         this->sendRenderInitialData();
     } else if (strcmp(type, "auth_invalid") == 0) {
-        (*this->controller).setWebsocketStatus(true, false);
+        this->queueWsStatus(true, false, true);
         Serial.println("HomeAssistant authentication failed");
     } else if (strcmp(type, "event") == 0) {
         if (doc["event"] && doc["event"]["result"]) {
@@ -209,36 +249,63 @@ void WebSocketClient::messageHandler(String payload) {
     }
 }
 
+// Runs on the websocket task. Builds the new State off lastSensorState (a
+// websocket-task-only copy, never shared with Controller) so invalid/unavailable
+// readings fall back to the last good value instead of touching Controller::getState().
 void WebSocketClient::handleState(JsonObject result) {
-    State newState = this->controller->getState();
+    State newState = this->lastSensorState;
 
-    float batteryPercentage = result[SENSOR_BATTERY_SOC];
-    newState.batteryPercentage = batteryPercentage;
+    float batteryPercentage;
+    if (parseFloatState(result[SENSOR_BATTERY_SOC], batteryPercentage)) {
+        newState.batteryPercentage = batteryPercentage;
+    }
 
-    bool powerAvailable = strcmp(result[SENSOR_GRID_POWER_AVAILABLE], "on") == 0;
-    newState.setPowerAvailable(powerAvailable, true);
+    const char* gridPowerAvailable = result[SENSOR_GRID_POWER_AVAILABLE] | "";
+    if (strcmp(gridPowerAvailable, "on") == 0) {
+        newState.setPowerAvailable(true, true);
+    } else if (strcmp(gridPowerAvailable, "off") == 0) {
+        newState.setPowerAvailable(false, true);
+    } else {
+        newState.setPowerAvailable(false, false);
+    }
 
-    float smartMeterActivePower = result[SENSOR_SMART_METER_ACTIVE_POWER];
-    newState.powerConsumption = smartMeterActivePower;
+    float powerConsumption;
+    if (parseFloatState(result[SENSOR_SMART_METER_ACTIVE_POWER], powerConsumption)) {
+        newState.powerConsumption = powerConsumption;
+    }
 
-    float currentLoadConsumption = result[SENSOR_CURRENT_LOAD_CONSUMPTION];
-    newState.powerConsumptionFromBattery = currentLoadConsumption;
+    float powerConsumptionFromBattery;
+    if (parseFloatState(result[SENSOR_CURRENT_LOAD_CONSUMPTION], powerConsumptionFromBattery)) {
+        newState.powerConsumptionFromBattery = powerConsumptionFromBattery;
+    }
 
-    float reservePowerBatteryChargePower = result[SENSOR_RESERVE_POWER_BATTERY_CHARGE_POWER];
-    newState.setBatteryChargingPower(reservePowerBatteryChargePower / 1000.0); // convert W to kW
+    float reservePowerBatteryChargePower;
+    if (parseFloatState(result[SENSOR_RESERVE_POWER_BATTERY_CHARGE_POWER], reservePowerBatteryChargePower)) {
+        newState.setBatteryChargingPower(reservePowerBatteryChargePower / 1000.0); // convert W to kW
+    }
 
-    String reservePowerBatteryChargeLeftDuration = result[SENSOR_RESERVE_POWER_BATTERY_CHARGE_LEFT_DURATION];;
-    newState.batteryChargingDuration = reservePowerBatteryChargeLeftDuration;
+    const char* chargeLeftDuration = result[SENSOR_RESERVE_POWER_BATTERY_CHARGE_LEFT_DURATION] | "";
+    newState.batteryChargingDuration = chargeLeftDuration;
 
-    String reservePowerBatteryDischargeLeftDuration = result[SENSOR_RESERVE_POWER_BATTERY_DISCHARGE_LEFT_DURATION];;
-    newState.batteryDischargingDuration = reservePowerBatteryDischargeLeftDuration;
+    const char* dischargeLeftDuration = result[SENSOR_RESERVE_POWER_BATTERY_DISCHARGE_LEFT_DURATION] | "";
+    newState.batteryDischargingDuration = dischargeLeftDuration;
 
-    bool lastReportedPowerAvailable = strcmp(result[SENSOR_GRID_POWER_MONITOR], "on") == 0;
-    this->checkPowerSensor(lastReportedPowerAvailable);
+    this->lastSensorState = newState;
 
-    this->controller->onStateUpdate(newState);
+    xSemaphoreTake(this->stateMutex, portMAX_DELAY);
+    this->pendingState = newState;
+    this->hasPendingState = true;
+    xSemaphoreGive(this->stateMutex);
+
+    const char* gridPowerMonitor = result[SENSOR_GRID_POWER_MONITOR] | "";
+    if (strcmp(gridPowerMonitor, "on") == 0) {
+        this->checkPowerSensor(true);
+    } else if (strcmp(gridPowerMonitor, "off") == 0) {
+        this->checkPowerSensor(false);
+    }
 }
 
+// Called from check() on the loop task; safe to read Controller directly.
 void WebSocketClient::checkPowerSensor() {
     const int powerSensorAvailable = this->controller->getPowerSensorAvailable();
     if (powerSensorAvailable != -1 && powerSensorAvailable != this->lastReportedPowerSensorAvailable) {
@@ -249,12 +316,57 @@ void WebSocketClient::checkPowerSensor() {
     }
 }
 
+// Called from handleState() on the websocket task; reads the mutex-protected
+// mirror (kept in sync by pumpWebSocket() on the loop task) instead of Controller.
 void WebSocketClient::checkPowerSensor(bool lastPowerSensor) {
-    const int powerSensorAvailable = this->controller->getPowerSensorAvailable();
+    xSemaphoreTake(this->stateMutex, portMAX_DELAY);
+    const int powerSensorAvailable = this->localPowerSensorAvailable;
+    xSemaphoreGive(this->stateMutex);
+
     if (powerSensorAvailable != -1 && (powerSensorAvailable == 1) != lastPowerSensor) {
         Serial.printf("Last stored power sensor available: %d\n\r", lastPowerSensor);
         Serial.printf("Power sensor available: %d\n\r", powerSensorAvailable);
         this->sendPowerSensor(powerSensorAvailable);
         this->lastReportedPowerSensorAvailable = powerSensorAvailable;
+    }
+}
+
+// Called from the loop task before controller.draw(). Drains data queued by the
+// websocket task and applies it — this is the only place onStateUpdate()/
+// setWebsocketStatus() are called for websocket-originated updates.
+void WebSocketClient::pump() {
+    State stateCopy;
+    bool hasState = false;
+
+    bool wsConnected = false;
+    bool wsAuthenticated = false;
+    bool wsHasAuthenticated = false;
+    bool hasWsStatus = false;
+
+    xSemaphoreTake(this->stateMutex, portMAX_DELAY);
+    if (this->hasPendingState) {
+        stateCopy = this->pendingState;
+        hasState = true;
+        this->hasPendingState = false;
+    }
+    if (this->hasPendingWsStatus) {
+        wsConnected = this->pendingWsConnected;
+        wsAuthenticated = this->pendingWsAuthenticated;
+        wsHasAuthenticated = this->pendingWsHasAuthenticated;
+        hasWsStatus = true;
+        this->hasPendingWsStatus = false;
+    }
+    xSemaphoreGive(this->stateMutex);
+
+    if (hasWsStatus) {
+        if (wsHasAuthenticated) {
+            this->controller->setWebsocketStatus(wsConnected, wsAuthenticated);
+        } else {
+            this->controller->setWebsocketStatus(wsConnected);
+        }
+    }
+
+    if (hasState) {
+        this->controller->onStateUpdate(stateCopy);
     }
 }

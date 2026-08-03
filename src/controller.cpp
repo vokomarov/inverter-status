@@ -1,6 +1,8 @@
 #include "controller.h"
 
-Controller::Controller() {}
+Controller::Controller() {
+    this->powerSensorAvailable = -1;
+}
 
 void Controller::setScreenComponents(
     Battery *battery,
@@ -35,7 +37,6 @@ void Controller::setWebsocketStatus(bool connected) {
     this->wsStatus->setStatus(connected);
     this->lastKnownState.websocketConnected = connected;
     this->lastKnownState.websocketAuthenticated = connected ? this->lastKnownState.websocketAuthenticated : false;
-    this->wsStatus->draw();
 }
 
 void Controller::setWebsocketStatus(bool connected, bool authenticated) {
@@ -46,7 +47,6 @@ void Controller::setWebsocketStatus(bool connected, bool authenticated) {
     this->wsStatus->setStatus(connected, authenticated);
     this->lastKnownState.websocketConnected = connected;
     this->lastKnownState.websocketAuthenticated = authenticated;
-    this->wsStatus->draw();
 }
 
 State Controller::getState() {
@@ -115,11 +115,13 @@ void Controller::initialDraw() {
     this->powerMetric->setLocation(0, 86);
     this->powerMetric->setPower(-1.0);
     this->powerMetric->setCharging(false);
+    this->powerMetric->setDischarging(false);
     this->powerMetric->initialDraw();
 
     this->timeMetric->setLocation(0, 108);
     this->timeMetric->setDuration("");
     this->timeMetric->setCharging(false);
+    this->timeMetric->setDischarging(false);
     this->timeMetric->initialDraw();
 }
 

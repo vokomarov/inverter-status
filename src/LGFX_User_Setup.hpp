@@ -26,8 +26,8 @@ public:
         {
             auto cfg = _panel_instance.config();
             
-            cfg.pin_cs = 3;   // CS (GPIO 5)
-            cfg.pin_rst = 16; // RST (GPIO 16)
+            cfg.pin_cs = 3;   // CS
+            cfg.pin_rst = 6;  // RST (GPIO 6)
 
             cfg.panel_width = 128;
             cfg.panel_height = 128;

@@ -2,7 +2,12 @@
 
 PowerMetric::PowerMetric()
 {
-    ScreenComponent();
+    this->power = -1.0;
+    this->lastDrawnPower = -1.0;
+    this->charging = false;
+    this->discharging = false;
+    this->lastDrawnCharging = false;
+    this->lastDrawnDischarging = false;
 }
 
 void PowerMetric::setPower(float power)
@@ -13,28 +18,33 @@ void PowerMetric::setPower(float power)
 void PowerMetric::setCharging(bool charging)
 {
     this->charging = charging;
-    this->drawIcon();
 }
 
 void PowerMetric::setDischarging(bool discharging)
 {
     this->discharging = discharging;
-    this->drawIcon();
 }
 
 void PowerMetric::initialDraw()
 {
-    this->iconColor = this->display.color888(135, 206, 235);
-    this->iconColorCharging = this->display.color888(51, 255, 51);
-    this->iconColorDischarging = this->display.color888(255, 69, 0);
-    this->textColor = this->display.color888(200, 200, 200);
+    this->iconColor = this->display->color888(135, 206, 235);
+    this->iconColorCharging = this->display->color888(51, 255, 51);
+    this->iconColorDischarging = this->display->color888(255, 69, 0);
+    this->textColor = this->display->color888(200, 200, 200);
 
     this->drawIcon();
+    this->lastDrawnCharging = this->charging;
+    this->lastDrawnDischarging = this->discharging;
     this->drawPowerMetric();
 }
 
 void PowerMetric::draw()
 {
+    if (this->charging != this->lastDrawnCharging || this->discharging != this->lastDrawnDischarging) {
+        this->drawIcon();
+        this->lastDrawnCharging = this->charging;
+        this->lastDrawnDischarging = this->discharging;
+    }
     this->drawPowerMetric();
 }
 
@@ -53,17 +63,17 @@ void PowerMetric::drawIcon()
     // Draw a 20x20 lightning bolt (power) icon at (x,y) using white color.
     // The icon is composed of two left-angled triangles to produce a clean bolt
     // shape and fits inside a 20x20 box: [x, x+19] x [y, y+19].
-    display.fillTriangle(iconX + 5, iconY + 2,
+    display->fillTriangle(iconX + 5, iconY + 2,
                          iconX + 13, iconY + 2,
                          iconX + 0, iconY + 10,
                          color);
 
-    display.fillTriangle(iconX + 13, iconY + 2,
+    display->fillTriangle(iconX + 13, iconY + 2,
                          iconX + 0, iconY + 10,
                          iconX + 5, iconY + 10,
                          color);
 
-    display.fillTriangle(iconX + 6, iconY + 8,
+    display->fillTriangle(iconX + 6, iconY + 8,
                          iconX + 12, iconY + 8,
                          iconX + 0, iconY + 18,
                          color);
@@ -82,15 +92,15 @@ void PowerMetric::drawPowerMetric()
         return;
     }
 
-    display.fillRect(textX, textY, 100, 19, TFT_BLACK);
-    display.setFont(&fonts::FreeSansBold9pt7b); 
-    display.setTextColor(this->textColor, TFT_BLACK);
-    display.setCursor(textX, textY);
-    display.print(this->power, 3);
-    display.setFont(&fonts::AsciiFont8x16); 
-    display.setTextColor(display.color888(64, 64, 64), TFT_BLACK);
-    display.setCursor(textX + 60, textY + 2);
-    display.print("kW");
+    display->fillRect(textX, textY, 100, 18, TFT_BLACK); // height 18: stay clear of the y=107 separator line
+    display->setFont(&fonts::FreeSansBold9pt7b); 
+    display->setTextColor(this->textColor, TFT_BLACK);
+    display->setCursor(textX, textY);
+    display->print(this->power, 3);
+    display->setFont(&fonts::AsciiFont8x16); 
+    display->setTextColor(display->color888(64, 64, 64), TFT_BLACK);
+    display->setCursor(textX + 60, textY + 2);
+    display->print("kW");
 
     this->lastDrawnPower = this->power;
 }

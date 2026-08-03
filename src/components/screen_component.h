@@ -5,7 +5,7 @@
 
 class ScreenComponent {
 protected:
-    LGFX display;
+    LGFX *display;
     int x;
     int y;
 

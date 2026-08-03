@@ -1,11 +1,12 @@
-#include <Arduino.h>
 #pragma once
+
+#include <Arduino.h>
 
 const unsigned int STATE_NORMAL = 0;
 const unsigned int STATE_DISCHARGING = 1;
 const unsigned int STATE_CHARGING = 2;
 
-const unsigned int BATTERY_MAX_SOC = 95.0;
+const float BATTERY_MAX_SOC = 95.0;
 
 class State {
     public:
