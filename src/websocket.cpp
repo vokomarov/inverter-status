@@ -112,8 +112,8 @@ void WebSocketClient::eventHandler(void *args, esp_event_base_t base, int32_t ev
                 this->expectedMessageLength = data->payload_len;
             }
 
-            // Append current chunk to buffer
-            this->messageBuffer += String((char *)data->data_ptr).substring(0, data->data_len);
+            // Append current chunk to buffer (data_ptr is not NUL-terminated)
+            this->messageBuffer.concat((const char *)data->data_ptr, data->data_len);
 
             // Check if we've received the complete message
             if (this->messageBuffer.length() == this->expectedMessageLength) {
