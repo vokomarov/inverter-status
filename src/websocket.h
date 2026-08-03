@@ -42,7 +42,7 @@ class WebSocketClient {
 
         int localPowerSensorAvailable = -1;
 
-        void send(JsonDocument message);
+        void send(const JsonDocument &message);
         void sendAuth();
         void sendRenderInitialData();
         void checkPowerSensor();

@@ -19,6 +19,7 @@ void WebSocketClient::configure(String host, int port, String token, Controller 
     snprintf(ws_uri, sizeof(ws_uri), "ws://%s:%d/api/websocket", host.c_str(), port);
     this->token = token;
     this->config.uri = ws_uri;
+    this->config.disable_auto_reconnect = true;
     this->controller = controller;
 }
 
@@ -182,7 +183,7 @@ void WebSocketClient::sendPowerSensor(const bool state) {
     this->send(doc);
 }
 
-void WebSocketClient::send(JsonDocument message) {
+void WebSocketClient::send(const JsonDocument &message) {
     size_t n = measureJson(message);
     char* payload = (char*)malloc(n + 1);
     if (payload == nullptr) {
