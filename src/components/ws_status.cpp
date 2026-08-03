@@ -21,8 +21,8 @@ void WSStatus::setStatus(bool connected)
 
 void WSStatus::initialDraw()
 {
-    this->iconColor = this->display.color888(0, 204, 0);
-    this->iconColorDisconnected = this->display.color888(64, 64, 64);
+    this->iconColor = this->display->color888(0, 204, 0);
+    this->iconColorDisconnected = this->display->color888(64, 64, 64);
 
     this->drawIcon();
 }
@@ -53,6 +53,6 @@ void WSStatus::drawIcon()
         }
     }
 
-    display.fillCircle(iconX, iconY, 2, color);
+    display->fillCircle(iconX, iconY, 2, color);
 }
 

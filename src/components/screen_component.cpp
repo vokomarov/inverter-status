@@ -2,11 +2,12 @@
 
 ScreenComponent::ScreenComponent()
 {
+    this->display = nullptr;
 }
 
 void ScreenComponent::setDisplay(LGFX *display)
 {
-    this->display = *display;
+    this->display = display;
 }
 
 void ScreenComponent::setLocation(int x, int y)

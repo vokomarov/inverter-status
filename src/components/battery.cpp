@@ -25,9 +25,9 @@ void Battery::setCharging(bool charging)
 void Battery::initialDraw()
 {
     this->lastDrawnPercentage = -1.0;
-    this->borderColor = this->display.color888(255, 255, 255);
-    this->fillColor = this->display.color888(0, 255, 0);
-    this->textColor = this->display.color888(255, 255, 255);
+    this->borderColor = this->display->color888(255, 255, 255);
+    this->fillColor = this->display->color888(0, 255, 0);
+    this->textColor = this->display->color888(255, 255, 255);
 
     this->drawOutline();
     this->drawPercentageFill();
@@ -43,8 +43,8 @@ void Battery::draw()
 void Battery::drawOutline()
 {
     // Draw battery outline
-    display.drawRect(x, y, width, height, this->borderColor);
-    display.fillRect(x + width / 4, y - height / 15, width / 2, height / 15, this->borderColor); // Battery tip
+    display->drawRect(x, y, width, height, this->borderColor);
+    display->fillRect(x + width / 4, y - height / 15, width / 2, height / 15, this->borderColor); // Battery tip
 }
 
 void Battery::drawPercentageFill()
@@ -71,7 +71,7 @@ void Battery::drawPercentageFill()
             // next segment will blink (from black to fill color)
             fillHeight = (height - 4) * (staticPercentage / 100.0);
             fillHeightBlink = (height - 4) * (25.0 / 100.0);
-            display.fillRect(x + 2, y + height - 3 - fillHeight - fillHeightBlink, width - 4, fillHeightBlink, TFT_BLACK);
+            display->fillRect(x + 2, y + height - 3 - fillHeight - fillHeightBlink, width - 4, fillHeightBlink, TFT_BLACK);
             break;
         case 1:
             // Charging frame 2: fill up to the last static segment plus blinking segment
@@ -80,14 +80,14 @@ void Battery::drawPercentageFill()
         }
     } else {
         // Clear previous fill
-        display.fillRect(x + 2, y + 2, width - 4, height - 4, TFT_BLACK); 
+        display->fillRect(x + 2, y + 2, width - 4, height - 4, TFT_BLACK); 
 
         // Calculate fill height based on percentage
         fillHeight = (height - 4) * (this->percentage / 100.0);
     }
 
     // Draw battery fill (from bottom up)
-    display.fillRect(x + 2, y + height - 2 - fillHeight, width - 4, fillHeight, this->fillColor);
+    display->fillRect(x + 2, y + height - 2 - fillHeight, width - 4, fillHeight, this->fillColor);
 
     this->lastDrawnPercentage = this->percentage;
 }
@@ -117,18 +117,18 @@ void Battery::drawPercentageMetric()
 
     int textX = x + 55;
     int textY = y + 10;
-    display.fillRect(textX, textY, 60, 30, TFT_BLACK);
-    display.setFont(&fonts::FreeSansBold18pt7b); 
-    display.setTextColor(this->textColor, TFT_BLACK);
-    display.setCursor(textX, textY);
+    display->fillRect(textX, textY, 60, 30, TFT_BLACK);
+    display->setFont(&fonts::FreeSansBold18pt7b); 
+    display->setTextColor(this->textColor, TFT_BLACK);
+    display->setCursor(textX, textY);
     if (this->percentage <= 0.0) {
-        display.print("xx");
+        display->print("xx");
     } else {
-        display.printf("%.0f", this->percentage);
+        display->printf("%.0f", this->percentage);
     }
-    display.setFont(&fonts::Font4); 
-    display.setCursor(textX+40, textY+0);
-    display.print("%");
+    display->setFont(&fonts::Font4); 
+    display->setCursor(textX+40, textY+0);
+    display->print("%");
 
     this->lastDrawnPercentageText = this->percentage;
 }

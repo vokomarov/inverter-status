@@ -21,9 +21,9 @@ void WiFiStatus::setSignal(int strength)
 
 void WiFiStatus::initialDraw()
 {
-    this->iconColor = this->display.color888(255, 255, 255);
-    this->iconColorDisconnected = this->display.color888(64, 64, 64);
-    this->textColor = this->display.color888(0, 255, 0);
+    this->iconColor = this->display->color888(255, 255, 255);
+    this->iconColorDisconnected = this->display->color888(64, 64, 64);
+    this->textColor = this->display->color888(0, 255, 0);
 
     this->drawIcon();
     this->drawMetric();
@@ -74,25 +74,25 @@ void WiFiStatus::drawIcon()
     int thickness = 1;
 
     // Outer arc
-    display.drawArc(cx, cy,
+    display->drawArc(cx, cy,
                     r_outer - (thickness - 1), r_outer,
                     startDeg, endDeg,
                     color3);
 
     // Middle arc
-    display.drawArc(cx, cy,
+    display->drawArc(cx, cy,
                     r_mid - (thickness - 1), r_mid,
                     startDeg, endDeg,
                     color2);
 
     // Inner arc
-    display.drawArc(cx, cy,
+    display->drawArc(cx, cy,
                     r_inner - (thickness - 1), r_inner,
                     startDeg, endDeg,
                     color1);
 
     // Draw the bottom dot to indicate the source of the signal
-    display.fillCircle(cx, cy + 1, 1, color);
+    display->fillCircle(cx, cy + 1, 1, color);
 }
 
 void WiFiStatus::drawMetric()
@@ -104,8 +104,8 @@ void WiFiStatus::drawMetric()
     int textX = x + 17;
     int textY = y + 3;
 
-    display.setFont(&fonts::FreeSans9pt7b); 
-    display.setCursor(textX, textY);
-    display.setTextColor(this->textColor, TFT_BLACK);
-    display.print(this->signalStrength);
+    display->setFont(&fonts::FreeSans9pt7b); 
+    display->setCursor(textX, textY);
+    display->setTextColor(this->textColor, TFT_BLACK);
+    display->print(this->signalStrength);
 }
