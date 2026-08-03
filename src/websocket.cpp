@@ -105,9 +105,9 @@ void WebSocketClient::eventHandler(void *args, esp_event_base_t base, int32_t ev
     case WEBSOCKET_EVENT_DATA:
         Serial.println("WEBSOCKET_EVENT_DATA");
 
-        if (data->op_code == 0x1) { // text frame
-            // Initialize buffer for new message
-            if (data->payload_offset == 0) {
+        if (data->op_code == 0x1 || (data->op_code == 0x0 && this->expectedMessageLength > 0)) {
+            // Initialize buffer for a new message
+            if (data->op_code == 0x1 && data->payload_offset == 0) {
                 this->messageBuffer.clear();
                 this->expectedMessageLength = data->payload_len;
             }
@@ -116,7 +116,7 @@ void WebSocketClient::eventHandler(void *args, esp_event_base_t base, int32_t ev
             this->messageBuffer.concat((const char *)data->data_ptr, data->data_len);
 
             // Check if we've received the complete message
-            if (this->messageBuffer.length() == this->expectedMessageLength) {
+            if (this->messageBuffer.length() >= this->expectedMessageLength) {
                 this->messageHandler(this->messageBuffer);
                 this->messageBuffer.clear();
                 this->expectedMessageLength = 0;
