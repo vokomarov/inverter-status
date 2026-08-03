@@ -8,8 +8,6 @@
 #include "components/ws_status.h"
 #include "state.h"
 
-#pragma once
-
 class Controller {
     private:
         Battery *battery;

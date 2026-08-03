@@ -2,7 +2,6 @@
 
 PowerStatus::PowerStatus()
 {
-    ScreenComponent();
     this->enableText = false;
 }
 

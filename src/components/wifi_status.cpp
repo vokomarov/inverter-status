@@ -2,7 +2,6 @@
 
 WiFiStatus::WiFiStatus()
 {
-    ScreenComponent();
     this->enableText = false;
 }
 

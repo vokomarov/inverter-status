@@ -7,8 +7,6 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 
-#define NO_DATA_TIMEOUT_SEC 10
-
 class WebSocketClient {
     private:
         String token;
@@ -66,3 +64,4 @@ class WebSocketClient {
         void messageHandler(String payload);
 
 };
+

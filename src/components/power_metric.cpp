@@ -2,7 +2,12 @@
 
 PowerMetric::PowerMetric()
 {
-    ScreenComponent();
+    this->power = -1.0;
+    this->lastDrawnPower = -1.0;
+    this->charging = false;
+    this->discharging = false;
+    this->lastDrawnCharging = false;
+    this->lastDrawnDischarging = false;
 }
 
 void PowerMetric::setPower(float power)
@@ -87,7 +92,7 @@ void PowerMetric::drawPowerMetric()
         return;
     }
 
-    display->fillRect(textX, textY, 100, 19, TFT_BLACK);
+    display->fillRect(textX, textY, 100, 18, TFT_BLACK); // height 18: stay clear of the y=107 separator line
     display->setFont(&fonts::FreeSansBold9pt7b); 
     display->setTextColor(this->textColor, TFT_BLACK);
     display->setCursor(textX, textY);

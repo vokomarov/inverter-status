@@ -2,8 +2,6 @@
 
 WSStatus::WSStatus()
 {
-    ScreenComponent();
-
     this->setFrameRate(4, 2);
 }
 

@@ -2,7 +2,12 @@
 
 TimeMetric::TimeMetric()
 {
-    ScreenComponent();
+    this->duration = "";
+    this->lastDrawnDuration = "";
+    this->charging = false;
+    this->discharging = false;
+    this->lastDrawnCharging = false;
+    this->lastDrawnDischarging = false;
 }
 
 void TimeMetric::setDuration(String duration)
