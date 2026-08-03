@@ -10,6 +10,21 @@ const char* SENSOR_RESERVE_POWER_BATTERY_CHARGE_POWER = "sensor.reserve_power_ba
 const char* SENSOR_RESERVE_POWER_BATTERY_CHARGE_LEFT_DURATION = "sensor.reserve_power_battery_charge_left_duration";
 const char* SENSOR_RESERVE_POWER_BATTERY_DISCHARGE_LEFT_DURATION = "sensor.reserve_power_battery_discharge_left_duration";
 
+// HA's render_template result delivers every value as a JSON string, even
+// numeric sensors - is<float>() alone would reject them all. Accept a real
+// number too (belt and suspenders), otherwise parse the string; "unavailable"/
+// "unknown"/"" fail to parse and the caller keeps the previous value.
+static bool parseFloatState(JsonVariantConst value, float &out) {
+    if (value.is<float>()) { out = value.as<float>(); return true; }
+    const char* s = value.as<const char*>();
+    if (s == nullptr || *s == '\0') return false;
+    char* end = nullptr;
+    float parsed = strtof(s, &end);
+    if (end == s || *end != '\0') return false;
+    out = parsed;
+    return true;
+}
+
 WebSocketClient::WebSocketClient() {
     this->stateMutex = xSemaphoreCreateMutex();
 }
@@ -240,8 +255,9 @@ void WebSocketClient::messageHandler(String payload) {
 void WebSocketClient::handleState(JsonObject result) {
     State newState = this->lastSensorState;
 
-    if (result[SENSOR_BATTERY_SOC].is<float>()) {
-        newState.batteryPercentage = result[SENSOR_BATTERY_SOC];
+    float batteryPercentage;
+    if (parseFloatState(result[SENSOR_BATTERY_SOC], batteryPercentage)) {
+        newState.batteryPercentage = batteryPercentage;
     }
 
     const char* gridPowerAvailable = result[SENSOR_GRID_POWER_AVAILABLE] | "";
@@ -253,16 +269,18 @@ void WebSocketClient::handleState(JsonObject result) {
         newState.setPowerAvailable(false, false);
     }
 
-    if (result[SENSOR_SMART_METER_ACTIVE_POWER].is<float>()) {
-        newState.powerConsumption = result[SENSOR_SMART_METER_ACTIVE_POWER];
+    float powerConsumption;
+    if (parseFloatState(result[SENSOR_SMART_METER_ACTIVE_POWER], powerConsumption)) {
+        newState.powerConsumption = powerConsumption;
     }
 
-    if (result[SENSOR_CURRENT_LOAD_CONSUMPTION].is<float>()) {
-        newState.powerConsumptionFromBattery = result[SENSOR_CURRENT_LOAD_CONSUMPTION];
+    float powerConsumptionFromBattery;
+    if (parseFloatState(result[SENSOR_CURRENT_LOAD_CONSUMPTION], powerConsumptionFromBattery)) {
+        newState.powerConsumptionFromBattery = powerConsumptionFromBattery;
     }
 
-    if (result[SENSOR_RESERVE_POWER_BATTERY_CHARGE_POWER].is<float>()) {
-        float reservePowerBatteryChargePower = result[SENSOR_RESERVE_POWER_BATTERY_CHARGE_POWER];
+    float reservePowerBatteryChargePower;
+    if (parseFloatState(result[SENSOR_RESERVE_POWER_BATTERY_CHARGE_POWER], reservePowerBatteryChargePower)) {
         newState.setBatteryChargingPower(reservePowerBatteryChargePower / 1000.0); // convert W to kW
     }
 

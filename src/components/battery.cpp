@@ -5,6 +5,7 @@ Battery::Battery()
     this->charging = false;
     this->percentage = 0.0;
     this->lastDrawnPercentage = -1.0;
+    this->lastDrawnPercentageText = -1.0;
     this->width = BATTERY_DEFAULT_WIDTH;
     this->height = BATTERY_DEFAULT_HEIGHT;
 
