@@ -234,31 +234,42 @@ void WebSocketClient::messageHandler(String payload) {
 }
 
 // Runs on the websocket task. Builds the new State off lastSensorState (a
-// websocket-task-only copy, never shared with Controller) so the loop task
-// applies updates on its own schedule via pump() instead of Controller::getState().
+// websocket-task-only copy, never shared with Controller) so invalid/unavailable
+// readings fall back to the last good value instead of touching Controller::getState().
 void WebSocketClient::handleState(JsonObject result) {
     State newState = this->lastSensorState;
 
-    float batteryPercentage = result[SENSOR_BATTERY_SOC];
-    newState.batteryPercentage = batteryPercentage;
+    if (result[SENSOR_BATTERY_SOC].is<float>()) {
+        newState.batteryPercentage = result[SENSOR_BATTERY_SOC];
+    }
 
-    bool powerAvailable = strcmp(result[SENSOR_GRID_POWER_AVAILABLE], "on") == 0;
-    newState.setPowerAvailable(powerAvailable, true);
+    const char* gridPowerAvailable = result[SENSOR_GRID_POWER_AVAILABLE] | "";
+    if (strcmp(gridPowerAvailable, "on") == 0) {
+        newState.setPowerAvailable(true, true);
+    } else if (strcmp(gridPowerAvailable, "off") == 0) {
+        newState.setPowerAvailable(false, true);
+    } else {
+        newState.setPowerAvailable(false, false);
+    }
 
-    float smartMeterActivePower = result[SENSOR_SMART_METER_ACTIVE_POWER];
-    newState.powerConsumption = smartMeterActivePower;
+    if (result[SENSOR_SMART_METER_ACTIVE_POWER].is<float>()) {
+        newState.powerConsumption = result[SENSOR_SMART_METER_ACTIVE_POWER];
+    }
 
-    float currentLoadConsumption = result[SENSOR_CURRENT_LOAD_CONSUMPTION];
-    newState.powerConsumptionFromBattery = currentLoadConsumption;
+    if (result[SENSOR_CURRENT_LOAD_CONSUMPTION].is<float>()) {
+        newState.powerConsumptionFromBattery = result[SENSOR_CURRENT_LOAD_CONSUMPTION];
+    }
 
-    float reservePowerBatteryChargePower = result[SENSOR_RESERVE_POWER_BATTERY_CHARGE_POWER];
-    newState.setBatteryChargingPower(reservePowerBatteryChargePower / 1000.0); // convert W to kW
+    if (result[SENSOR_RESERVE_POWER_BATTERY_CHARGE_POWER].is<float>()) {
+        float reservePowerBatteryChargePower = result[SENSOR_RESERVE_POWER_BATTERY_CHARGE_POWER];
+        newState.setBatteryChargingPower(reservePowerBatteryChargePower / 1000.0); // convert W to kW
+    }
 
-    String reservePowerBatteryChargeLeftDuration = result[SENSOR_RESERVE_POWER_BATTERY_CHARGE_LEFT_DURATION];
-    newState.batteryChargingDuration = reservePowerBatteryChargeLeftDuration;
+    const char* chargeLeftDuration = result[SENSOR_RESERVE_POWER_BATTERY_CHARGE_LEFT_DURATION] | "";
+    newState.batteryChargingDuration = chargeLeftDuration;
 
-    String reservePowerBatteryDischargeLeftDuration = result[SENSOR_RESERVE_POWER_BATTERY_DISCHARGE_LEFT_DURATION];
-    newState.batteryDischargingDuration = reservePowerBatteryDischargeLeftDuration;
+    const char* dischargeLeftDuration = result[SENSOR_RESERVE_POWER_BATTERY_DISCHARGE_LEFT_DURATION] | "";
+    newState.batteryDischargingDuration = dischargeLeftDuration;
 
     this->lastSensorState = newState;
 
@@ -267,8 +278,12 @@ void WebSocketClient::handleState(JsonObject result) {
     this->hasPendingState = true;
     xSemaphoreGive(this->stateMutex);
 
-    bool lastReportedPowerAvailable = strcmp(result[SENSOR_GRID_POWER_MONITOR], "on") == 0;
-    this->checkPowerSensor(lastReportedPowerAvailable);
+    const char* gridPowerMonitor = result[SENSOR_GRID_POWER_MONITOR] | "";
+    if (strcmp(gridPowerMonitor, "on") == 0) {
+        this->checkPowerSensor(true);
+    } else if (strcmp(gridPowerMonitor, "off") == 0) {
+        this->checkPowerSensor(false);
+    }
 }
 
 // Called from check() on the loop task; safe to read Controller directly.
