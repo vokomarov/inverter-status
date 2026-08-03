@@ -13,13 +13,11 @@ void TimeMetric::setDuration(String duration)
 void TimeMetric::setCharging(bool charging)
 {
     this->charging = charging;
-    this->drawIcon();
 }
 
 void TimeMetric::setDischarging(bool discharging)
 {
     this->discharging = discharging;
-    this->drawIcon();
 }
 
 void TimeMetric::initialDraw()
@@ -30,11 +28,18 @@ void TimeMetric::initialDraw()
     this->textColor = this->display.color888(200, 200, 200);
 
     this->drawIcon();
+    this->lastDrawnCharging = this->charging;
+    this->lastDrawnDischarging = this->discharging;
     this->drawTimeMetric();
 }
 
 void TimeMetric::draw()
 {
+    if (this->charging != this->lastDrawnCharging || this->discharging != this->lastDrawnDischarging) {
+        this->drawIcon();
+        this->lastDrawnCharging = this->charging;
+        this->lastDrawnDischarging = this->discharging;
+    }
     this->drawTimeMetric();
 }
 

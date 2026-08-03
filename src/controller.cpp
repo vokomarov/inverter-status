@@ -35,7 +35,6 @@ void Controller::setWebsocketStatus(bool connected) {
     this->wsStatus->setStatus(connected);
     this->lastKnownState.websocketConnected = connected;
     this->lastKnownState.websocketAuthenticated = connected ? this->lastKnownState.websocketAuthenticated : false;
-    this->wsStatus->draw();
 }
 
 void Controller::setWebsocketStatus(bool connected, bool authenticated) {
@@ -46,7 +45,6 @@ void Controller::setWebsocketStatus(bool connected, bool authenticated) {
     this->wsStatus->setStatus(connected, authenticated);
     this->lastKnownState.websocketConnected = connected;
     this->lastKnownState.websocketAuthenticated = authenticated;
-    this->wsStatus->draw();
 }
 
 State Controller::getState() {

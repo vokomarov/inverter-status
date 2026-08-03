@@ -8,6 +8,8 @@ private:
     String lastDrawnDuration;
     bool charging;
     bool discharging;
+    bool lastDrawnCharging;
+    bool lastDrawnDischarging;
 
     uint32_t iconColor;
     uint32_t iconColorCharging;

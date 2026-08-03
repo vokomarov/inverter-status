@@ -13,13 +13,11 @@ void PowerMetric::setPower(float power)
 void PowerMetric::setCharging(bool charging)
 {
     this->charging = charging;
-    this->drawIcon();
 }
 
 void PowerMetric::setDischarging(bool discharging)
 {
     this->discharging = discharging;
-    this->drawIcon();
 }
 
 void PowerMetric::initialDraw()
@@ -30,11 +28,18 @@ void PowerMetric::initialDraw()
     this->textColor = this->display.color888(200, 200, 200);
 
     this->drawIcon();
+    this->lastDrawnCharging = this->charging;
+    this->lastDrawnDischarging = this->discharging;
     this->drawPowerMetric();
 }
 
 void PowerMetric::draw()
 {
+    if (this->charging != this->lastDrawnCharging || this->discharging != this->lastDrawnDischarging) {
+        this->drawIcon();
+        this->lastDrawnCharging = this->charging;
+        this->lastDrawnDischarging = this->discharging;
+    }
     this->drawPowerMetric();
 }
 

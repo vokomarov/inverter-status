@@ -64,3 +64,10 @@ void checkWiFi() {
         }
     }
 }
+
+// Called from loop() before controller.draw(); the only place websocket-task
+// data (state updates, connection status) gets applied to Controller/display.
+void pumpWebSocket() {
+    webSocketClient.setPowerSensorAvailable(controller.getPowerSensorAvailable());
+    webSocketClient.pump();
+}

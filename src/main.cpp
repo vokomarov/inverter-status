@@ -65,6 +65,7 @@ void loop() {
   checkPower();
   drawLines();
   checkWiFi();
+  pumpWebSocket();
   controller.draw();
 
   delay(100);
