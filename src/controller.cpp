@@ -60,14 +60,14 @@ void Controller::onStateUpdate(State newState) {
     }
 
     if (newState.getPowerMetric() != this->lastKnownState.getPowerMetric() ||
-        newState.isCharging() != this->lastKnownState.isCharging()) {
+        newState.state != this->lastKnownState.state) {
         this->powerMetric->setPower(newState.getPowerMetric());
         this->powerMetric->setCharging(newState.isCharging());
         this->powerMetric->setDischarging(newState.isDischarging());
     }
 
     if (newState.getTimeMetric() != this->lastKnownState.getTimeMetric() ||
-        newState.isCharging() != this->lastKnownState.isCharging()) {
+        newState.state != this->lastKnownState.state) {
         this->timeMetric->setDuration(newState.getTimeMetric());
         this->timeMetric->setCharging(newState.isCharging());
         this->timeMetric->setDischarging(newState.isDischarging());

@@ -7,6 +7,7 @@ const char* SENSOR_GRID_POWER_MONITOR = "binary_sensor.grid_power_monitor";
 const char* SENSOR_SMART_METER_ACTIVE_POWER = "sensor.smart_meter_active_power";
 const char* SENSOR_CURRENT_LOAD_CONSUMPTION = "sensor.current_load_consumption";
 const char* SENSOR_RESERVE_POWER_BATTERY_CHARGE_POWER = "sensor.reserve_power_battery_charge_power";
+const char* SENSOR_RESERVE_POWER_BATTERY_DISCHARGE_POWER = "sensor.reserve_power_battery_discharge_power";
 const char* SENSOR_RESERVE_POWER_BATTERY_CHARGE_LEFT_DURATION = "sensor.reserve_power_battery_charge_left_duration";
 const char* SENSOR_RESERVE_POWER_BATTERY_DISCHARGE_LEFT_DURATION = "sensor.reserve_power_battery_discharge_left_duration";
 
@@ -172,6 +173,7 @@ void WebSocketClient::sendRenderInitialData() {
     tpl[SENSOR_SMART_METER_ACTIVE_POWER] = "{{ states('sensor.smart_meter_active_power') }}";
     tpl[SENSOR_CURRENT_LOAD_CONSUMPTION] = "{{ states('sensor.current_load_consumption') }}";
     tpl[SENSOR_RESERVE_POWER_BATTERY_CHARGE_POWER] = "{{ states('sensor.reserve_power_battery_charge_power') }}";
+    tpl[SENSOR_RESERVE_POWER_BATTERY_DISCHARGE_POWER] = "{{ states('sensor.reserve_power_battery_discharge_power') }}";
     tpl[SENSOR_RESERVE_POWER_BATTERY_CHARGE_LEFT_DURATION] = "{{ states('sensor.reserve_power_battery_charge_left_duration') }}";
     tpl[SENSOR_RESERVE_POWER_BATTERY_DISCHARGE_LEFT_DURATION] = "{{ states('sensor.reserve_power_battery_discharge_left_duration') }}";
 
@@ -282,6 +284,11 @@ void WebSocketClient::handleState(JsonObject result) {
     float reservePowerBatteryChargePower;
     if (parseFloatState(result[SENSOR_RESERVE_POWER_BATTERY_CHARGE_POWER], reservePowerBatteryChargePower)) {
         newState.setBatteryChargingPower(reservePowerBatteryChargePower / 1000.0); // convert W to kW
+    }
+
+    float reservePowerBatteryDischargePower;
+    if (parseFloatState(result[SENSOR_RESERVE_POWER_BATTERY_DISCHARGE_POWER], reservePowerBatteryDischargePower)) {
+        newState.setBatteryDischargingPower(reservePowerBatteryDischargePower / 1000.0); // convert W to kW
     }
 
     const char* chargeLeftDuration = result[SENSOR_RESERVE_POWER_BATTERY_CHARGE_LEFT_DURATION] | "";
